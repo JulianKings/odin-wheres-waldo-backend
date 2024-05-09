@@ -6,7 +6,7 @@ import 'dotenv/config'
 import mongoose from 'mongoose';
 import cors from 'cors';
 
-import indexRouter from './routes/index';
+import stagesRouter from './routes/stages'
 
 var app = express();
 
@@ -25,6 +25,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
 
-app.use('/', indexRouter);
+app.use('/stage', stagesRouter);
 
 export default app;

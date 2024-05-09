@@ -12,31 +12,23 @@ var stageSchema = new Schema({
     type: String,
     required: true
   },
-  class_name: {
-    type: String,
-    required: true
-  },
   stage: {
     type: Schema.Types.ObjectId,
     ref: "stage",
     required: true
   },
-  min_x: {
+  hour: {
     type: Number,
     required: true
   },
-  max_x: {
+  minute: {
     type: Number,
     required: true
   },
-  min_y: {
-    type: Number,
-    required: true
-  },
-  max_y: {
+  second: {
     type: Number,
     required: true
   }
 });
-var stageCharacterModel = _mongoose["default"].model("stage_character", stageSchema);
-var _default = exports["default"] = stageCharacterModel;
+var stageLeaderboardModel = _mongoose["default"].model("stage_leaderboard", stageSchema);
+var _default = exports["default"] = stageLeaderboardModel;
