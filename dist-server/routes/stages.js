@@ -11,4 +11,5 @@ var router = _express["default"].Router();
 router.get('/all', _stageController.stages_all);
 router.get('/children/:id', _stageController.stages_get_children);
 router.post('/add_winner', _stageController.stage_post_winner);
+router.get('/leaderboard/:id', _stageController.stages_get_leaderboard);
 var _default = exports["default"] = router;

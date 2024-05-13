@@ -114,4 +114,26 @@ const stage_post_winner = [
     }),
 ]
 
-export { stages_all, stages_get_children, stage_post_winner }
+const stages_get_leaderboard = expressAsyncHandler(async (req, res, next) => {
+    if(req.params.id.length < 24)
+    {
+        // No results
+        const responseObject = {
+            responseStatus: 'stageNotFound',
+        }
+        return res.json(responseObject);
+    }
+    
+    const stageLeaderboard = await stageLeaderboardModel.find({ stage: req.params.id })
+        .sort({ hour: 1, minute: 1, second: 1})
+        .exec();
+
+    const responseObject = {
+        responseStatus: 'validRequest',
+        stageLeaderboard: stageLeaderboard
+    }
+
+    return res.json(responseObject);
+});
+
+export { stages_all, stages_get_children, stage_post_winner, stages_get_leaderboard }

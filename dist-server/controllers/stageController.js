@@ -4,7 +4,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stages_get_children = exports.stages_all = exports.stage_post_winner = void 0;
+exports.stages_get_leaderboard = exports.stages_get_children = exports.stages_all = exports.stage_post_winner = void 0;
 var _expressAsyncHandler = _interopRequireDefault(require("express-async-handler"));
 var _expressValidator = require("express-validator");
 var _stage = _interopRequireDefault(require("../models/stage"));
@@ -173,3 +173,44 @@ var stage_post_winner = exports.stage_post_winner = [
     return _ref3.apply(this, arguments);
   };
 }())];
+var stages_get_leaderboard = exports.stages_get_leaderboard = (0, _expressAsyncHandler["default"])( /*#__PURE__*/function () {
+  var _ref4 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(req, res, next) {
+    var _responseObject4, stageLeaderboard, responseObject;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          if (!(req.params.id.length < 24)) {
+            _context4.next = 3;
+            break;
+          }
+          // No results
+          _responseObject4 = {
+            responseStatus: 'stageNotFound'
+          };
+          return _context4.abrupt("return", res.json(_responseObject4));
+        case 3:
+          _context4.next = 5;
+          return _stage_leaderboard["default"].find({
+            stage: req.params.id
+          }).sort({
+            hour: 1,
+            minute: 1,
+            second: 1
+          }).exec();
+        case 5:
+          stageLeaderboard = _context4.sent;
+          responseObject = {
+            responseStatus: 'validRequest',
+            stageLeaderboard: stageLeaderboard
+          };
+          return _context4.abrupt("return", res.json(responseObject));
+        case 8:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4);
+  }));
+  return function (_x10, _x11, _x12) {
+    return _ref4.apply(this, arguments);
+  };
+}());
