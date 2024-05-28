@@ -19,6 +19,10 @@ var stageSchema = new Schema({
   timestamp: {
     type: Date,
     required: true
+  },
+  approved: {
+    type: Boolean,
+    required: true
   }
 });
 var stageModel = _mongoose["default"].model("stage", stageSchema);

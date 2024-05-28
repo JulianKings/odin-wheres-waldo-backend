@@ -5,7 +5,7 @@ import stageCharacterModel from "../models/stage_character";
 import stageLeaderboardModel from "../models/stage_leaderboard";
 
 const stages_all = expressAsyncHandler(async (req, res, next) => {
-    const allStages = await stageModel.find({}).sort({ timestamp: 1 })
+    const allStages = await stageModel.find({ approved: true }).sort({ timestamp: 1 })
         .exec();
 
     const responseObject = {
@@ -136,4 +136,75 @@ const stages_get_leaderboard = expressAsyncHandler(async (req, res, next) => {
     return res.json(responseObject);
 });
 
-export { stages_all, stages_get_children, stage_post_winner, stages_get_leaderboard }
+const stage_post_add = [
+    // Validate and sanitize fields.
+    body("name", "Please input a valid stage name.")
+        .trim()
+        .isLength({ min: 1 })
+        .isLength({ max: 128 })
+        .escape(),
+    body("imageUrl", "Please input a valid image.")
+        .trim()
+        .isLength({ min: 1 }),
+    expressAsyncHandler(async (req, res, next) => {
+        const errors = validationResult(req);
+
+        if(errors.isEmpty())
+        {
+            // add new leaderboard entry
+            const newStage = new stageModel({
+                name: req.body.name,
+                image_url: req.body.imageUrl,
+                timestamp: (new Date()),
+                approved: false
+            });
+
+            const stageData = (await newStage.save());
+
+            if(stageData)
+            {
+
+                const addCharacters = [];
+                
+                req.body.characters.forEach((character) => {
+
+                    const formattedName = character.name.toLowerCase().trim();
+
+                    const newCharacter = new stageCharacterModel({
+                        name: character.name,
+                        class_name: formattedName,
+                        stage: stageData._id,
+                        min_x: (character.position.relativeX - 2),
+                        max_x: (character.position.relativeX + 2),
+                        min_y: (character.position.y - 19),
+                        max_y: (character.position.y + 19),
+                    });
+
+                    addCharacters.push(newCharacter.save());
+                });
+
+                (await Promise.all(addCharacters));
+
+                const responseObject = {
+                    responseStatus: 'stageAdded'
+                }
+                res.json(responseObject);
+
+            } else {
+                const responseObject = {
+                    responseStatus: 'stageAddError',
+                    errors: ['Could not create the stage (database error)']
+                }
+                res.json(responseObject);
+            }
+        } else {
+            const responseObject = {
+                responseStatus: 'stageAddError',
+                errors: errors.array()
+            }
+            res.json(responseObject);
+        }
+    }),
+]
+
+export { stages_all, stages_get_children, stage_post_winner, stages_get_leaderboard, stage_post_add }

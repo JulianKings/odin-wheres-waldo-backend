@@ -4,7 +4,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stages_get_leaderboard = exports.stages_get_children = exports.stages_all = exports.stage_post_winner = void 0;
+exports.stages_get_leaderboard = exports.stages_get_children = exports.stages_all = exports.stage_post_winner = exports.stage_post_add = void 0;
 var _expressAsyncHandler = _interopRequireDefault(require("express-async-handler"));
 var _expressValidator = require("express-validator");
 var _stage = _interopRequireDefault(require("../models/stage"));
@@ -21,7 +21,9 @@ var stages_all = exports.stages_all = (0, _expressAsyncHandler["default"])( /*#_
       while (1) switch (_context.prev = _context.next) {
         case 0:
           _context.next = 2;
-          return _stage["default"].find({}).sort({
+          return _stage["default"].find({
+            approved: true
+          }).sort({
             timestamp: 1
           }).exec();
         case 2:
@@ -214,3 +216,85 @@ var stages_get_leaderboard = exports.stages_get_leaderboard = (0, _expressAsyncH
     return _ref4.apply(this, arguments);
   };
 }());
+var stage_post_add = exports.stage_post_add = [
+// Validate and sanitize fields.
+(0, _expressValidator.body)("name", "Please input a valid stage name.").trim().isLength({
+  min: 1
+}).isLength({
+  max: 128
+}).escape(), (0, _expressValidator.body)("imageUrl", "Please input a valid image.").trim().isLength({
+  min: 1
+}), (0, _expressAsyncHandler["default"])( /*#__PURE__*/function () {
+  var _ref5 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(req, res, next) {
+    var errors, newStage, stageData, addCharacters, responseObject, _responseObject5, _responseObject6;
+    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+      while (1) switch (_context5.prev = _context5.next) {
+        case 0:
+          errors = (0, _expressValidator.validationResult)(req);
+          if (!errors.isEmpty()) {
+            _context5.next = 19;
+            break;
+          }
+          // add new leaderboard entry
+          newStage = new _stage["default"]({
+            name: req.body.name,
+            image_url: req.body.imageUrl,
+            timestamp: new Date(),
+            approved: false
+          });
+          _context5.next = 5;
+          return newStage.save();
+        case 5:
+          stageData = _context5.sent;
+          if (!stageData) {
+            _context5.next = 15;
+            break;
+          }
+          addCharacters = [];
+          req.body.characters.forEach(function (character) {
+            var formattedName = character.name.toLowerCase().trim();
+            var newCharacter = new _stage_character["default"]({
+              name: character.name,
+              class_name: formattedName,
+              stage: stageData._id,
+              min_x: character.position.relativeX - 2,
+              max_x: character.position.relativeX + 2,
+              min_y: character.position.y - 19,
+              max_y: character.position.y + 19
+            });
+            addCharacters.push(newCharacter.save());
+          });
+          _context5.next = 11;
+          return Promise.all(addCharacters);
+        case 11:
+          responseObject = {
+            responseStatus: 'stageAdded'
+          };
+          res.json(responseObject);
+          _context5.next = 17;
+          break;
+        case 15:
+          _responseObject5 = {
+            responseStatus: 'stageAddError',
+            errors: ['Could not create the stage (database error)']
+          };
+          res.json(_responseObject5);
+        case 17:
+          _context5.next = 21;
+          break;
+        case 19:
+          _responseObject6 = {
+            responseStatus: 'stageAddError',
+            errors: errors.array()
+          };
+          res.json(_responseObject6);
+        case 21:
+        case "end":
+          return _context5.stop();
+      }
+    }, _callee5);
+  }));
+  return function (_x13, _x14, _x15) {
+    return _ref5.apply(this, arguments);
+  };
+}())];
