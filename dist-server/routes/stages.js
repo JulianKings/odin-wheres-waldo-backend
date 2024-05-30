@@ -10,6 +10,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "d
 var router = _express["default"].Router();
 router.get('/all', _stageController.stages_all);
 router.get('/children/:id', _stageController.stages_get_children);
+router.get('/update_time/:id', _stageController.stages_update_time);
 router.post('/add_winner', _stageController.stage_post_winner);
 router.get('/leaderboard/:id', _stageController.stages_get_leaderboard);
 router.post('/add_stage', _stageController.stage_post_add);

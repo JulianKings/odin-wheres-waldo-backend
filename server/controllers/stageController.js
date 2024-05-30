@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import stageModel from "../models/stage";
 import stageCharacterModel from "../models/stage_character";
 import stageLeaderboardModel from "../models/stage_leaderboard";
+import { appendTime, obtainTime, updateTime } from "../util/hashManager";
 
 const stages_all = expressAsyncHandler(async (req, res, next) => {
     const allStages = await stageModel.find({ approved: true }).sort({ timestamp: 1 })
@@ -28,12 +29,46 @@ const stages_get_children = expressAsyncHandler(async (req, res, next) => {
     const stageChildren = await stageCharacterModel.find({ stage: req.params.id })
         .exec();
 
+    const timeId = appendTime(req.app.settings.hash_dictionary, new Date());
+
     const responseObject = {
         responseStatus: 'validRequest',
-        stageChildren: stageChildren
+        stageChildren: stageChildren,
+        time_id: timeId
     }
 
     return res.json(responseObject);
+});
+
+const stages_update_time = expressAsyncHandler(async (req, res, next) => {
+    if(req.params.id.length < 16)
+    {
+        // No results
+        const responseObject = {
+            responseStatus: 'timeNotFound',
+        }
+        return res.json(responseObject);
+    }
+
+    const currentTime = (new Date());    
+    const stageTime = updateTime(req.app.settings.hash_dictionary, req.params.id, currentTime);
+
+    if(stageTime)
+    {
+        const timeObject = obtainTime(req.app.settings.hash_dictionary, req.params.id);
+        const responseObject = {
+            responseStatus: 'validRequest',
+            time_id: req.params.id,
+            finished_date: timeObject.finished,
+            started_date: timeObject.time
+        }
+        return res.json(responseObject);
+    } else {
+        const responseObject = {
+            responseStatus: 'timeNotFound'
+        }
+        return res.json(responseObject);
+    }
 });
 
 const stage_post_winner = [
@@ -50,66 +85,86 @@ const stage_post_winner = [
         {
             const findEntry = await stageLeaderboardModel.findOne({ name: req.body.name, stage: req.body.stage });
 
-            if(!findEntry)
+            // process time
+            const timeObject = obtainTime(req.app.settings.hash_dictionary, req.body.time);
+
+            if(timeObject && timeObject.finished)
             {
-                // add new leaderboard entry
-                const newStage = new stageLeaderboardModel({
-                    name: req.body.name,
-                    stage: req.body.stage,
-                    hour: req.body.time.hour,
-                    minute: req.body.time.minute,
-                    second: req.body.time.second,
-                });
+                const timeDiff = Math.ceil(Math.abs(Date.parse(timeObject.finished) - Date.parse(timeObject.time)) / 1000);
 
-                (await newStage.save());
-                const responseObject = {
-                    responseStatus: 'validWinner'
-                }
-                res.json(responseObject);
-            } else {
-                let lessTime = false;
-                if(req.body.time.hour < findEntry.hour)
-                {
-                    lessTime = true;
-                } else if(req.body.time.hour === findEntry.hour)
-                {
-                    if(req.body.time.minute < findEntry.minute)
-                    {
-                        lessTime = true;
-                    } else if(req.body.time.minute === findEntry.minute)
-                    {
-                        if(req.body.time.second < findEntry.second)
-                        {
-                            lessTime = true;
-                        }
-                    }
+                const seconds = (timeDiff > 60) ? (timeDiff % 60) : timeDiff;
+                let minutes = (timeDiff > 60) ? (Math.trunc(timeDiff / 60)) : 0;
+                const finalMinutes = (minutes > 60) ? (minutes % 60) : minutes;
+                const hours = (minutes > 60) ? (Math.trunc(minutes / 60)) : 0;
+
+                const time = {
+                    second: seconds,
+                    minute: finalMinutes,
+                    hour: hours
                 }
 
-                if(lessTime)
+                if(!findEntry)
                 {
-                    // update new leaderboard entry
-                    const updateEntry = new stageLeaderboardModel({
-                        name: findEntry.name,
-                        stage: findEntry.stage,
-                        hour: req.body.time.hour,
-                        minute: req.body.time.minute,
-                        second: req.body.time.second,
-                        _id: findEntry._id,
+                    // add new leaderboard entry
+    
+                    const newStage = new stageLeaderboardModel({
+                        name: req.body.name,
+                        stage: req.body.stage,
+                        hour: time.hour,
+                        minute: time.minute,
+                        second: time.second,
                     });
-
-                    await stageLeaderboardModel.findByIdAndUpdate(findEntry._id, updateEntry, {});
+    
+                    (await newStage.save());
                     const responseObject = {
-                        responseStatus: 'validUpdateWinner'
+                        responseStatus: 'validWinner'
                     }
                     res.json(responseObject);
                 } else {
-                    const responseObject = {
-                        responseStatus: 'invalidUpdateWinner'
+                    let lessTime = false;
+                    if(time.hour < findEntry.hour)
+                    {
+                        lessTime = true;
+                    } else if(time.hour === findEntry.hour)
+                    {
+                        if(time.minute < findEntry.minute)
+                        {
+                            lessTime = true;
+                        } else if(time.minute === findEntry.minute)
+                        {
+                            if(time.second < findEntry.second)
+                            {
+                                lessTime = true;
+                            }
+                        }
                     }
-                    res.json(responseObject);
-                }
-
-            }
+    
+                    if(lessTime)
+                    {
+                        // update new leaderboard entry
+                        const updateEntry = new stageLeaderboardModel({
+                            name: findEntry.name,
+                            stage: findEntry.stage,
+                            hour: time.hour,
+                            minute: time.minute,
+                            second: time.second,
+                            _id: findEntry._id,
+                        });
+    
+                        await stageLeaderboardModel.findByIdAndUpdate(findEntry._id, updateEntry, {});
+                        const responseObject = {
+                            responseStatus: 'validUpdateWinner'
+                        }
+                        res.json(responseObject);
+                    } else {
+                        const responseObject = {
+                            responseStatus: 'invalidUpdateWinner'
+                        }
+                        res.json(responseObject);
+                    }
+    
+                }   
+            }            
         }
     }),
 ]
@@ -207,4 +262,4 @@ const stage_post_add = [
     }),
 ]
 
-export { stages_all, stages_get_children, stage_post_winner, stages_get_leaderboard, stage_post_add }
+export { stages_all, stages_get_children, stages_update_time, stage_post_winner, stages_get_leaderboard, stage_post_add }

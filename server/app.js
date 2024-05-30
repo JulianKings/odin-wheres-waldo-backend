@@ -10,6 +10,8 @@ import stagesRouter from './routes/stages'
 
 var app = express();
 
+app.set('hash_dictionary', []);
+
 // Set up mongoose connection
 mongoose.set("strictQuery", false);
 
